@@ -285,8 +285,17 @@ $('senderList').onclick = e => {
     s.name = n.trim() || s.name; s.phone = fmtPhone(p); save(); renderSenders(); render();
   }
   if (del) {
-    if (db.rows.some(r => r.sender === del)) return alert('이 보내는분으로 등록된 사람이 있어 삭제할 수 없어요. 먼저 바꿔주세요.');
-    if (confirm('삭제할까요?')) { db.senders = db.senders.filter(x => x.id !== del); save(); renderSenders(); }
+    const s = db.senders.find(x => x.id === del);
+    const used = db.rows.filter(r => r.sender === del);
+    if (used.length) {
+      const others = db.senders.filter(x => x.id !== del);
+      if (!others.length) return alert('다른 보내는분이 없어서 삭제할 수 없어요. 먼저 한 명 추가해 주세요.');
+      const ans = prompt(s.name + ' 으로 등록된 사람이 ' + used.length + '명 있어요.\n누구로 바꿀까요? 번호를 입력하세요.\n\n' + others.map((o, i) => (i + 1) + '. ' + o.name).join('\n'));
+      if (ans === null) return;
+      const to = others[parseInt(ans) - 1]; if (!to) return alert('번호가 맞지 않아요');
+      used.forEach(r => r.sender = to.id);
+    } else if (!confirm(s.name + ' 삭제할까요?')) return;
+    db.senders = db.senders.filter(x => x.id !== del); save(); renderSenders(); render();
   }
 };
 
