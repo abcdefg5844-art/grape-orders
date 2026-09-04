@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>포도 주문 관리</title>
+<style>
+  :root { --ink:#222; --muted:#777; --line:#ddd; --bg:#f6f6f4; --card:#fff; --accent:#5b3fa0; --warn:#fff3b0; --ok:#e2f0d9; --bad:#ffd9d9; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:"맑은 고딕","Malgun Gothic","Apple SD Gothic Neo",sans-serif; font-size:16px; color:var(--ink); background:var(--bg); }
+  header { background:var(--card); border-bottom:1px solid var(--line); padding:14px 24px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; position:sticky; top:0; z-index:5; }
+  header h1 { font-size:22px; margin:0; }
+  header .sp { flex:1; }
+  .stat { color:var(--muted); font-size:15px; }
+  .stat b { color:var(--ink); font-size:18px; }
+  main { padding:20px 24px; display:grid; grid-template-columns: 420px 1fr; gap:20px; align-items:start; }
+  @media (max-width: 1000px) { main { grid-template-columns: 1fr; } }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:18px; }
+  .card h2 { font-size:17px; margin:0 0 12px; }
+  label { display:block; font-size:14px; color:var(--muted); margin:10px 0 4px; }
+  input[type=text], input[type=tel], input[type=number], select, textarea { width:100%; font:inherit; font-size:17px; padding:9px 10px; border:1px solid #bbb; border-radius:6px; background:#fff; }
+  input:focus, select:focus, textarea:focus { outline:2px solid var(--accent); border-color:transparent; }
+  .row { display:flex; gap:8px; }
+  .row > * { flex:1; }
+  .row .n { flex:0 0 90px; }
+  button { font:inherit; font-size:16px; padding:9px 16px; border-radius:6px; border:1px solid #bbb; background:#fff; cursor:pointer; }
+  button:hover { background:#f0f0f0; }
+  button.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+  button.primary:hover { background:#4a3286; }
+  button.big { width:100%; font-size:18px; padding:12px; margin-top:14px; }
+  button.small { font-size:14px; padding:4px 10px; }
+  .addrbox { display:flex; gap:8px; }
+  .addrbox input { flex:1; }
+  .zip { color:var(--muted); font-size:14px; margin-top:4px; min-height:18px; }
+  .tools { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; align-items:center; }
+  .tools input[type=text] { width:240px; }
+  table { width:100%; border-collapse:collapse; font-size:15px; }
+  th, td { border-bottom:1px solid var(--line); padding:8px 6px; vertical-align:top; text-align:left; }
+  th { background:#fafafa; font-weight:600; position:sticky; top:63px; }
+  td.c, th.c { text-align:center; }
+  tr.off td { color:#aaa; }
+  tr.off td .name { text-decoration:line-through; }
+  .name { font-weight:600; }
+  .memo { color:#a66; font-size:13px; margin-top:3px; white-space:pre-wrap; }
+  .tag { display:inline-block; font-size:12px; padding:1px 7px; border-radius:10px; margin-left:4px; vertical-align:middle; }
+  .tag.ok { background:var(--ok); } .tag.bad { background:var(--warn); }
+  td.actions { white-space:nowrap; }
+  td.actions button { margin-right:2px; }
+  .qty { width:56px; text-align:center; font-size:16px; padding:4px; }
+  #modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:20; align-items:center; justify-content:center; }
+  #modal.open { display:flex; }
+  #modal .box { background:#fff; border-radius:10px; width:min(560px, 96vw); padding:14px; }
+  #modal .box .hd { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+  #postcode { width:100%; height:480px; }
+  .senders { margin-top:8px; }
+  .senders .s { display:flex; gap:6px; align-items:center; padding:6px 0; border-bottom:1px dashed var(--line); font-size:14px; }
+  .senders .s span { flex:1; }
+  .hint { font-size:13px; color:var(--muted); margin-top:8px; line-height:1.5; }
+  .print-only { display:none; }
+  @media print {
+    header, main > .card.form, .tools, td.actions, th.actions, .no-print { display:none !important; }
+    body { background:#fff; }
+    main { display:block; padding:0; }
+    .card { border:0; padding:0; }
+    .print-only { display:block; text-align:center; font-size:24px; font-weight:700; margin:0 0 14px; }
+    table { font-size:13px; }
+    th { position:static; }
+    th, td { border:1px solid #000; }
+    .memo { display:none; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>🍇 포도 주문 관리</h1>
+  <span class="stat">발송 <b id="stCount">0</b>명 · <b id="stBox">0</b>박스 · 확인필요 <b id="stBad">0</b>건</span>
+  <span class="sp"></span>
+  <button id="btnExcel" class="primary">엑셀 내보내기</button>
+  <button id="btnPrint">인쇄</button>
+  <button id="btnBackup">백업 저장</button>
+  <button id="btnRestore">백업 불러오기</button>
+  <input type="file" id="fileRestore" accept=".json" style="display:none">
+</header>
+
+<main>
+  <section class="card form">
+    <h2 id="formTitle">새로 추가</h2>
+    <input type="hidden" id="fId">
+    <label>받는분 성명</label>
+    <input type="text" id="fName" placeholder="예) 홍길동 / 김철수 부장님">
+    <label>주소 <span style="color:#a66">— 검색 버튼으로 찾으면 오타·반송이 없어요</span></label>
+    <div class="addrbox">
+      <input type="text" id="fAddr" placeholder="주소검색을 눌러 선택 (조각만 쳐도 나옵니다)" readonly>
+      <button id="btnAddr" class="primary">주소검색</button>
+    </div>
+    <div class="zip" id="fZipView"></div>
+    <input type="hidden" id="fZip">
+    <label>상세주소 (동·호수, 층, 가게 이름 등)</label>
+    <input type="text" id="fDetail" placeholder="예) 104동 1203호 / 3층 / 김밥35번가">
+    <label>받는분 전화</label>
+    <input type="tel" id="fPhone" placeholder="010-0000-0000" inputmode="numeric">
+    <div class="row">
+      <div class="n"><label>수량(박스)</label><input type="number" id="fQty" value="1" min="1"></div>
+      <div><label>보내는분</label><select id="fSender"></select></div>
+    </div>
+    <label>메모 (확인할 것, 특이사항)</label>
+    <textarea id="fMemo" rows="2"></textarea>
+    <button id="btnSave" class="primary big">목록에 추가</button>
+    <button id="btnCancel" class="big" style="display:none">수정 취소</button>
+
+    <details style="margin-top:18px">
+      <summary style="cursor:pointer;font-weight:600">보내는분 관리</summary>
+      <div class="senders" id="senderList"></div>
+      <div class="row" style="margin-top:8px">
+        <input type="text" id="sName" placeholder="이름">
+        <input type="tel" id="sPhone" placeholder="전화">
+        <button id="btnAddSender" class="small">추가</button>
+      </div>
+      <div class="hint">보내는분 주소는 택배 접수 시 농장 주소로 통일되니 이름·전화만 있으면 됩니다.</div>
+    </details>
+
+    <details style="margin-top:12px">
+      <summary style="cursor:pointer;font-weight:600">새 시즌 시작 / 도움말</summary>
+      <div class="hint">
+        · 명단은 이 컴퓨터 브라우저에 자동 저장됩니다. 다른 PC로 옮기거나 만약을 대비해 가끔 <b>백업 저장</b>을 눌러 파일로 보관하세요.<br>
+        · 내년에는 <b>새 시즌 시작</b>을 누르면 모든 사람이 "발송 안 함"으로 바뀌고 수량이 1로 초기화됩니다. 보낼 사람만 체크하면 끝.<br>
+        · <b>엑셀 내보내기</b>는 발송 체크된 사람만 내려받습니다.<br>
+        · 주소 옆 <span class="tag ok">확인</span>은 주소검색으로 고른 주소, <span class="tag bad">확인필요</span>는 손으로 친 주소입니다.
+      </div>
+      <button id="btnNewSeason" class="small" style="margin-top:8px">새 시즌 시작 (전체 발송 해제)</button>
+    </details>
+  </section>
+
+  <section class="card">
+    <div class="print-only" id="printTitle">포도 주문 내역</div>
+    <div class="tools">
+      <input type="text" id="q" placeholder="이름·주소·전화 검색">
+      <label style="margin:0;display:flex;align-items:center;gap:4px"><input type="checkbox" id="onlySend"> 발송만 보기</label>
+      <label style="margin:0;display:flex;align-items:center;gap:4px"><input type="checkbox" id="onlyBad"> 확인필요만</label>
+      <span class="sp" style="flex:1"></span>
+      <button id="btnAllOn" class="small">전체 발송</button>
+      <button id="btnAllOff" class="small">전체 해제</button>
+    </div>
+    <div style="overflow-x:auto">
+    <table>
+      <thead><tr>
+        <th class="c no-print" style="width:40px">발송</th>
+        <th class="c" style="width:40px">연번</th>
+        <th style="width:130px">성명</th>
+        <th>주소</th>
+        <th style="width:130px">전화번호</th>
+        <th class="c" style="width:60px">수량</th>
+        <th style="width:110px">보내는분</th>
+        <th class="actions" style="width:110px"></th>
+      </tr></thead>
+      <tbody id="tbody"></tbody>
+      <tfoot><tr><td colspan="5" class="c" style="font-weight:700">계</td><td class="c" style="font-weight:700" id="ftBox">0</td><td colspan="2">박스</td></tr></tfoot>
+    </table>
+    </div>
+  </section>
+</main>
+
+<div id="modal">
+  <div class="box">
+    <div class="hd"><b>주소 검색 — 도로명·건물명·동 이름 아무거나 입력</b><button id="btnCloseModal" class="small">닫기</button></div>
+    <div id="postcode"></div>
+  </div>
+</div>
+
+<script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+const KEY = 'grape_orders_v1';
+const SEED = {
+  senders: [
+    {id:'s_mom',  name:'엄마(성함 입력)', phone:''},
+    {id:'s_hong', name:'홍미정', phone:'010-3004-4820'},
+    {id:'s_cho',  name:'조윤옥', phone:'010-8862-8031'},
+    {id:'s_lee',  name:'이순영', phone:'010-5478-6841'},
+    {id:'s_shin', name:'신경민', phone:''},
+  ],
+  rows: []
+};
+
+let db = load();
+function load() {
+  try { const s = localStorage.getItem(KEY); if (s) return JSON.parse(s); } catch (e) {}
+  return JSON.parse(JSON.stringify(SEED));
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) {} }
+const $ = id => document.getElementById(id);
+const uid = () => 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const senderName = id => (db.senders.find(s => s.id === id) || {}).name || '';
+const senderPhone = id => (db.senders.find(s => s.id === id) || {}).phone || '';
+function fmtPhone(v) {
+  const d = (v || '').replace(/\D/g, '');
+  if (d.length === 11) return d.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3');
+  if (d.length === 10) return d.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3');
+  return v || '';
+}
+function fullAddr(r) { return [r.addr, r.detail].filter(Boolean).join(' '); }
+
+// ---------- 보내는분 ----------
+function renderSenders() {
+  const sel = $('fSender'); const cur = sel.value;
+  sel.innerHTML = db.senders.map(s => `<option value="${s.id}">${s.name}${s.phone ? ' (' + s.phone + ')' : ''}</option>`).join('');
+  if (cur) sel.value = cur;
+  $('senderList').innerHTML = db.senders.map(s =>
+    `<div class="s"><span>${s.name} ${s.phone ? '· ' + s.phone : ''}</span>
+     <button class="small" data-edit="${s.id}">수정</button><button class="small" data-del="${s.id}">삭제</button></div>`).join('');
+}
+$('btnAddSender').onclick = () => {
+  const n = $('sName').value.trim(); if (!n) return alert('이름을 입력하세요');
+  db.senders.push({ id: 's' + uid(), name: n, phone: fmtPhone($('sPhone').value) });
+  $('sName').value = ''; $('sPhone').value = ''; save(); renderSenders(); render();
+};
+$('senderList').onclick = e => {
+  const ed = e.target.dataset.edit, del = e.target.dataset.del;
+  if (ed) {
+    const s = db.senders.find(x => x.id === ed);
+    const n = prompt('이름', s.name); if (n === null) return;
+    const p = prompt('전화', s.phone); if (p === null) return;
+    s.name = n.trim() || s.name; s.phone = fmtPhone(p); save(); renderSenders(); render();
+  }
+  if (del) {
+    if (db.rows.some(r => r.sender === del)) return alert('이 보내는분으로 등록된 사람이 있어 삭제할 수 없어요. 먼저 바꿔주세요.');
+    if (confirm('삭제할까요?')) { db.senders = db.senders.filter(x => x.id !== del); save(); renderSenders(); }
+  }
+};
+
+// ---------- 주소검색 (다음 우편번호) ----------
+let pc = null;
+$('btnAddr').onclick = () => {
+  if (typeof daum === 'undefined') return alert('주소검색 기능을 불러오지 못했어요. 인터넷 연결을 확인한 뒤 새로고침 해주세요.');
+  $('modal').classList.add('open');
+  $('postcode').innerHTML = '';
+  pc = new daum.Postcode({
+    oncomplete: d => {
+      let extra = '';
+      if (d.bname && /[동|로|가]$/g.test(d.bname)) extra += d.bname;
+      if (d.buildingName && d.apartment === 'Y') extra += (extra ? ', ' : '') + d.buildingName;
+      $('fAddr').value = d.roadAddress + (extra ? ' (' + extra + ')' : '');
+      $('fZip').value = d.zonecode;
+      $('fZipView').textContent = '우편번호 ' + d.zonecode + (d.jibunAddress ? ' · 지번: ' + d.jibunAddress : '');
+      $('fAddr').dataset.verified = '1';
+      $('modal').classList.remove('open');
+      $('fDetail').focus();
+    },
+    width: '100%', height: '100%'
+  });
+  pc.embed($('postcode'));
+};
+$('btnCloseModal').onclick = () => $('modal').classList.remove('open');
+$('modal').onclick = e => { if (e.target.id === 'modal') $('modal').classList.remove('open'); };
+// 검색 없이 직접 치고 싶을 때: 주소칸 더블클릭
+$('fAddr').ondblclick = () => { $('fAddr').readOnly = false; $('fAddr').dataset.verified = ''; $('fZipView').textContent = '직접 입력 중 — 확인필요로 표시됩니다'; };
+
+// ---------- 입력/수정 ----------
+function clearForm() {
+  $('fId').value = ''; $('fName').value = ''; $('fAddr').value = ''; $('fAddr').readOnly = true; $('fAddr').dataset.verified = '';
+  $('fZip').value = ''; $('fZipView').textContent = ''; $('fDetail').value = ''; $('fPhone').value = ''; $('fQty').value = 1; $('fMemo').value = '';
+  $('formTitle').textContent = '새로 추가'; $('btnSave').textContent = '목록에 추가'; $('btnCancel').style.display = 'none';
+}
+function editRow(id) {
+  const r = db.rows.find(x => x.id === id); if (!r) return;
+  $('fId').value = r.id; $('fName').value = r.name; $('fAddr').value = r.addr; $('fAddr').dataset.verified = r.verified ? '1' : '';
+  $('fZip').value = r.zip || ''; $('fZipView').textContent = r.zip ? '우편번호 ' + r.zip : (r.verified ? '' : '검색으로 고른 주소가 아님 — 주소검색으로 다시 확인 권장');
+  $('fDetail').value = r.detail || ''; $('fPhone').value = r.phone || ''; $('fQty').value = r.qty || 1; $('fSender').value = r.sender; $('fMemo').value = r.memo || '';
+  $('formTitle').textContent = r.name + ' 수정'; $('btnSave').textContent = '수정 저장'; $('btnCancel').style.display = 'block';
+  window.scrollTo({ top: 0, behavior: 'smooth' }); $('fName').focus();
+}
+$('btnCancel').onclick = clearForm;
+$('btnSave').onclick = () => {
+  const name = $('fName').value.trim(); if (!name) return alert('받는분 성명을 입력하세요');
+  const addr = $('fAddr').value.trim(); if (!addr) return alert('주소를 입력하세요 (주소검색 버튼)');
+  const rec = {
+    name, addr, zip: $('fZip').value, detail: $('fDetail').value.trim(), phone: fmtPhone($('fPhone').value),
+    qty: Math.max(1, parseInt($('fQty').value) || 1), sender: $('fSender').value, memo: $('fMemo').value.trim(),
+    verified: $('fAddr').dataset.verified === '1', send: true
+  };
+  const id = $('fId').value;
+  if (id) { const r = db.rows.find(x => x.id === id); Object.assign(r, rec); }
+  else db.rows.push(Object.assign({ id: uid(), src: '직접입력' }, rec));
+  save(); render(); clearForm(); $('fName').focus();
+};
+$('fPhone').onblur = () => $('fPhone').value = fmtPhone($('fPhone').value);
+
+// ---------- 목록 ----------
+function visibleRows() {
+  const q = $('q').value.trim().toLowerCase();
+  return db.rows.filter(r => {
+    if ($('onlySend').checked && !r.send) return false;
+    if ($('onlyBad').checked && r.verified && !r.memo) return false;
+    if (q && !(r.name + fullAddr(r) + r.phone + senderName(r.sender)).toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+function render() {
+  const rows = visibleRows(); let n = 0;
+  $('tbody').innerHTML = rows.map(r => {
+    const idx = r.send ? ++n : '';
+    return `<tr class="${r.send ? '' : 'off'}" data-id="${r.id}">
+      <td class="c no-print"><input type="checkbox" data-send="${r.id}" ${r.send ? 'checked' : ''}></td>
+      <td class="c">${idx}</td>
+      <td><span class="name">${r.name}</span></td>
+      <td>${fullAddr(r)} ${r.verified ? '<span class="tag ok">확인</span>' : '<span class="tag bad">확인필요</span>'}${r.zip ? '<span class="tag" style="background:#eee">' + r.zip + '</span>' : ''}
+          ${r.memo ? '<div class="memo">' + r.memo + '</div>' : ''}</td>
+      <td>${r.phone || '<span style="color:#c33">없음</span>'}</td>
+      <td class="c"><input type="number" class="qty no-print" min="1" value="${r.qty}" data-qty="${r.id}"><span class="print-only" style="font-size:inherit;font-weight:400;margin:0">${r.qty}</span></td>
+      <td>${senderName(r.sender)}</td>
+      <td class="actions"><button class="small" data-edit="${r.id}">수정</button><button class="small" data-del="${r.id}">삭제</button></td>
+    </tr>`;
+  }).join('');
+  const sendRows = db.rows.filter(r => r.send);
+  const boxes = sendRows.reduce((a, r) => a + (parseInt(r.qty) || 0), 0);
+  $('stCount').textContent = sendRows.length; $('stBox').textContent = boxes; $('ftBox').textContent = boxes;
+  $('stBad').textContent = sendRows.filter(r => !r.verified || r.memo || !r.phone).length;
+}
+$('tbody').onclick = e => {
+  const t = e.target;
+  if (t.dataset.edit) editRow(t.dataset.edit);
+  if (t.dataset.del) { const r = db.rows.find(x => x.id === t.dataset.del); if (confirm(r.name + ' 삭제할까요? (내년에도 안 보낼 사람만 삭제하세요. 올해만 안 보내면 발송 체크를 해제)')) { db.rows = db.rows.filter(x => x.id !== r.id); save(); render(); } }
+};
+$('tbody').onchange = e => {
+  const t = e.target;
+  if (t.dataset.send) { db.rows.find(x => x.id === t.dataset.send).send = t.checked; save(); render(); }
+  if (t.dataset.qty) { db.rows.find(x => x.id === t.dataset.qty).qty = Math.max(1, parseInt(t.value) || 1); save(); render(); }
+};
+['q', 'onlySend', 'onlyBad'].forEach(id => $(id).oninput = render);
+$('btnAllOn').onclick = () => { db.rows.forEach(r => r.send = true); save(); render(); };
+$('btnAllOff').onclick = () => { db.rows.forEach(r => r.send = false); save(); render(); };
+$('btnNewSeason').onclick = () => {
+  if (!confirm('새 시즌을 시작할까요?\n모든 사람이 "발송 안 함"이 되고 수량이 1로 초기화됩니다. 명단·주소는 그대로 남습니다.')) return;
+  db.rows.forEach(r => { r.send = false; r.qty = 1; }); save(); render();
+};
+
+// ---------- 백업 ----------
+function download(name, blob) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
+const today = () => new Date().toISOString().slice(0, 10);
+$('btnBackup').onclick = () => download('포도명단_백업_' + today() + '.json', new Blob([JSON.stringify(db, null, 1)], { type: 'application/json' }));
+$('btnRestore').onclick = () => $('fileRestore').click();
+$('fileRestore').onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => { try { const d = JSON.parse(rd.result); if (!d.rows || !d.senders) throw 0; if (confirm('현재 명단을 백업 파일 내용으로 바꿀까요?')) { db = d; save(); renderSenders(); render(); } } catch (_) { alert('백업 파일이 아닙니다'); } };
+  rd.readAsText(f); e.target.value = '';
+};
+
+// ---------- 엑셀 ----------
+$('btnExcel').onclick = () => {
+  const rows = db.rows.filter(r => r.send);
+  if (!rows.length) return alert('발송 체크된 사람이 없어요');
+  const bad = rows.filter(r => !r.phone || !r.verified);
+  if (bad.length && !confirm(bad.length + '명이 전화번호가 없거나 주소가 확인필요 상태예요. 그래도 내보낼까요?')) return;
+  const aoa = [['포도 주문 내역'], [],
+    ['연번', '성명', '주소', '우편번호', '전화번호', '수량', '보내는분', '보내는분 연락처', '메모']];
+  rows.forEach((r, i) => aoa.push([i + 1, r.name, fullAddr(r), r.zip || '', r.phone, r.qty, senderName(r.sender), senderPhone(r.sender), (r.verified ? '' : '[주소 확인필요] ') + (r.memo || '')]));
+  aoa.push(['계', '', '', '', '', rows.reduce((a, r) => a + r.qty, 0), '박스']);
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 8 } }];
+  ws['!cols'] = [{ wch: 5 }, { wch: 16 }, { wch: 60 }, { wch: 8 }, { wch: 15 }, { wch: 6 }, { wch: 12 }, { wch: 15 }, { wch: 40 }];
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, '주문내역');
+  XLSX.writeFile(wb, '포도_주문내역_' + today() + '.xlsx');
+};
+$('btnPrint').onclick = () => { $('printTitle').textContent = '포도 주문 내역 (' + today() + ')'; window.print(); };
+
+renderSenders(); render(); clearForm();
+</script>
+</body>
+</html>
