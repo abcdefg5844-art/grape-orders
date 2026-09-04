@@ -273,6 +273,7 @@ function renderSenders() {
 }
 $('btnAddSender').onclick = () => {
   const n = $('sName').value.trim(); if (!n) return alert('이름을 입력하세요');
+  if (db.senders.some(x => x.name.trim() === n)) return alert('같은 이름의 보내는분이 이미 있어요');
   db.senders.push({ id: 's' + uid(), name: n, phone: fmtPhone($('sPhone').value) });
   $('sName').value = ''; $('sPhone').value = ''; save(); renderSenders(); render();
 };
@@ -287,7 +288,11 @@ $('senderList').onclick = e => {
   if (del) {
     const s = db.senders.find(x => x.id === del);
     const used = db.rows.filter(r => r.sender === del);
-    if (used.length) {
+    const twin = db.senders.find(x => x.id !== del && x.name.trim() === s.name.trim());
+    if (used.length && twin) {
+      if (!confirm('같은 이름(' + twin.name + ')이 또 있어요. 등록된 ' + used.length + '명을 그쪽으로 합치고 이 항목을 삭제할까요?')) return;
+      used.forEach(r => r.sender = twin.id);
+    } else if (used.length) {
       const others = db.senders.filter(x => x.id !== del);
       if (!others.length) return alert('다른 보내는분이 없어서 삭제할 수 없어요. 먼저 한 명 추가해 주세요.');
       const ans = prompt(s.name + ' 으로 등록된 사람이 ' + used.length + '명 있어요.\n누구로 바꿀까요? 번호를 입력하세요.\n\n' + others.map((o, i) => (i + 1) + '. ' + o.name).join('\n'));
