@@ -79,9 +79,20 @@
   <button id="btnBackup">백업 저장</button>
   <button id="btnRestore">백업 불러오기</button>
   <input type="file" id="fileRestore" accept=".json" style="display:none">
+  <span id="userBox" class="stat" style="display:none"><span id="userEmail"></span> <button id="btnLogout" class="small">로그아웃</button></span>
+  <span id="syncState" class="stat" title="저장 상태"></span>
 </header>
 
-<main>
+<div id="gate" style="display:none; padding:60px 24px; text-align:center">
+  <div class="card" style="max-width:420px; margin:0 auto">
+    <h2 style="margin-top:0">🍇 포도 주문 관리</h2>
+    <p style="color:var(--muted); line-height:1.6">명단은 허용된 가족 계정만 볼 수 있어요.<br>구글 계정으로 로그인해 주세요.</p>
+    <button id="btnLogin" class="primary big">구글로 로그인</button>
+    <p id="gateMsg" style="color:#c33; min-height:20px; font-size:14px"></p>
+  </div>
+</div>
+
+<main id="app" style="display:none">
   <section class="card form">
     <h2 id="formTitle">새로 추가</h2>
     <input type="hidden" id="fId">
@@ -121,7 +132,7 @@
     <details style="margin-top:12px">
       <summary style="cursor:pointer;font-weight:600">새 시즌 시작 / 도움말</summary>
       <div class="hint">
-        · 명단은 이 컴퓨터 브라우저에 자동 저장됩니다. 다른 PC로 옮기거나 만약을 대비해 가끔 <b>백업 저장</b>을 눌러 파일로 보관하세요.<br>
+        · 명단은 가족 공유 저장소에 자동 저장됩니다(허용된 구글 계정만 접근). 어느 기기에서 고쳐도 다른 기기에 바로 반영돼요. 만약을 대비해 가끔 <b>백업 저장</b>으로 파일도 보관하세요.<br>
         · 내년에는 <b>새 시즌 시작</b>을 누르면 모든 사람이 "발송 안 함"으로 바뀌고 수량이 1로 초기화됩니다. 보낼 사람만 체크하면 끝.<br>
         · <b>엑셀 내보내기</b>는 발송 체크된 사람만 내려받습니다.<br>
         · 주소 옆 <span class="tag ok">확인</span>은 주소검색으로 고른 주소, <span class="tag bad">확인필요</span>는 손으로 친 주소입니다.
@@ -168,8 +179,24 @@
 
 <script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script>
-const KEY = 'grape_orders_v1';
+const firebaseConfig = {
+  apiKey: "AIzaSyACQpHsula3ps4hJsFA7p61B2HMwYDuSDg",
+  authDomain: "grape-orders.firebaseapp.com",
+  projectId: "grape-orders",
+  storageBucket: "grape-orders.firebasestorage.app",
+  messagingSenderId: "558220981878",
+  appId: "1:558220981878:web:98c966632230bacb481157"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const fs = firebase.firestore();
+try { fs.enablePersistence({ synchronizeTabs: true }); } catch (e) {}
+const DOC = fs.collection('grape').doc('list');
+
 const SEED = {
   senders: [
     {id:'s_mom',  name:'엄마(성함 입력)', phone:''},
@@ -181,13 +208,48 @@ const SEED = {
   rows: []
 };
 
-let db = load();
-function load() {
-  try { const s = localStorage.getItem(KEY); if (s) return JSON.parse(s); } catch (e) {}
-  return JSON.parse(JSON.stringify(SEED));
-}
-function save() { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) {} }
 const $ = id => document.getElementById(id);
+let db = JSON.parse(JSON.stringify(SEED));
+let unsub = null;
+function setSync(t, bad) { const s = $('syncState'); s.textContent = t; s.style.color = bad ? '#c33' : ''; }
+function save() {
+  setSync('저장 중…');
+  DOC.set({ senders: db.senders, rows: db.rows, updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: (auth.currentUser || {}).email || '' })
+    .then(() => setSync('저장됨 ✓'))
+    .catch(e => { console.error(e); setSync('저장 실패: ' + (e.code === 'permission-denied' ? '이 계정은 허용되지 않았어요' : e.message), true); });
+}
+function startSync() {
+  if (unsub) unsub();
+  setSync('불러오는 중…');
+  unsub = DOC.onSnapshot({ includeMetadataChanges: true }, snap => {
+    if (!snap.exists) { db = JSON.parse(JSON.stringify(SEED)); save(); }
+    else { const d = snap.data(); db = { senders: d.senders || SEED.senders, rows: d.rows || [] }; }
+    renderSenders(); render();
+    setSync(snap.metadata.hasPendingWrites ? '저장 중…' : (snap.metadata.fromCache ? '오프라인(저장된 사본)' : '동기화됨 ✓'), false);
+  }, e => {
+    console.error(e);
+    if (e.code === 'permission-denied') { showGate('이 계정(' + ((auth.currentUser || {}).email || '') + ')은 허용 목록에 없어요. 관리자에게 이메일을 알려주세요.'); auth.signOut(); }
+    else setSync('연결 오류: ' + e.message, true);
+  });
+}
+function showGate(msg) {
+  $('gate').style.display = 'block'; $('app').style.display = 'none'; $('userBox').style.display = 'none';
+  $('gateMsg').textContent = msg || '';
+}
+function showApp(user) {
+  $('gate').style.display = 'none'; $('app').style.display = '';
+  $('userBox').style.display = ''; $('userEmail').textContent = user.email;
+  startSync();
+}
+$('btnLogin').onclick = () => {
+  const p = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(p).catch(e => {
+    if (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment') auth.signInWithRedirect(p);
+    else $('gateMsg').textContent = '로그인 실패: ' + e.message;
+  });
+};
+$('btnLogout').onclick = () => { if (unsub) unsub(); unsub = null; auth.signOut(); };
+auth.onAuthStateChanged(u => { if (u) showApp(u); else showGate(''); });
 const uid = () => 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const senderName = id => (db.senders.find(s => s.id === id) || {}).name || '';
 const senderPhone = id => (db.senders.find(s => s.id === id) || {}).phone || '';
