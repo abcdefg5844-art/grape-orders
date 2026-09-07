@@ -119,16 +119,25 @@
   .senders .s { display:flex; gap:6px; align-items:center; padding:6px 0; border-bottom:1px dashed var(--line); font-size:14px; }
   .senders .s span { flex:1; }
   .hint { font-size:13px; color:var(--muted); margin-top:8px; line-height:1.5; }
-  .print-only { display:none; }
+  /* 인쇄 / PDF 저장 전용 영역 */
+  #printArea { display:none; }
   @media print {
-    header, main > .card.form, .side, .tools, td.actions, th.actions, .no-print { display:none !important; }
+    @page { size:A4 landscape; margin:12mm; }
+    body > *:not(#printArea) { display:none !important; }
     body { background:#fff; }
-    main { display:block; padding:0; }
-    .card { border:0; padding:0; }
-    .print-only { display:block; text-align:center; font-size:24px; font-weight:700; margin:0 0 14px; }
-    table { font-size:13px; }
-    th, td { border:1px solid #000; background:#fff !important; }
-    .memo { display:none; }
+    #printArea { display:block; font-family:"맑은 고딕","Malgun Gothic","Apple SD Gothic Neo",sans-serif; color:#000; }
+    #printArea .pdate { text-align:right; font-size:10pt; color:#444; }
+    #printArea h1 { text-align:center; font-size:18pt; margin:2mm 0 5mm; }
+    #printArea table { width:100%; border-collapse:collapse; font-size:10.5pt; table-layout:fixed; }
+    #printArea thead { display:table-header-group; }
+    #printArea tfoot { display:table-row-group; }
+    #printArea tr { page-break-inside:avoid; break-inside:avoid; }
+    #printArea th, #printArea td { border:1px solid #000; padding:3px 4px; vertical-align:middle; overflow-wrap:anywhere; line-height:1.35; }
+    #printArea th { background:#eee !important; font-weight:700; font-size:10pt; text-align:center; white-space:nowrap; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    #printArea td.c { text-align:center; }
+    #printArea td.nw { white-space:nowrap; }
+    #printArea tfoot td { font-weight:700; background:#f7f7f7 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    #printArea .pnote { margin-top:4mm; font-size:9.5pt; color:#444; }
   }
 </style>
 </head>
@@ -138,6 +147,7 @@
   <span class="stat">발송 <b id="stCount">0</b>명 · <b id="stBox">0</b>박스 · 확인필요 <b id="stBad">0</b>건</span>
   <span class="sp"></span>
   <button id="btnExcel" class="primary">엑셀 내보내기</button>
+  <button id="btnPdf" title="인쇄 창에서 대상을 'PDF로 저장'으로 선택하세요">PDF 저장</button>
   <button id="btnPrint">인쇄</button>
   <button id="btnBackup">백업 저장</button>
   <button id="btnRestore">백업 불러오기</button>
@@ -205,7 +215,7 @@
         · 왼쪽 <b>명단 목록</b>에서 명단을 나눠 관리할 수 있어요(예: 엄마 명단, 어머님 명단). <b>＋ 새 명단</b>으로 추가하고, 명단 위에 마우스를 올리면 나오는 ✎로 이름 변경, ✕로 삭제합니다.<br>
         · 명단은 가족 공유 저장소에 자동 저장됩니다(허용된 구글 계정만 접근). 어느 기기에서 고쳐도 다른 기기에 바로 반영돼요. 만약을 대비해 가끔 <b>백업 저장</b>으로 파일도 보관하세요(모든 탭이 한 파일에 담깁니다).<br>
         · 내년에는 <b>새 시즌 시작</b>을 누르면 이 명단의 모든 사람이 "발송 안 함"으로 바뀌고 수량이 1로 초기화됩니다. 보낼 사람만 체크하면 끝.<br>
-        · <b>엑셀 내보내기</b>·<b>인쇄</b>는 지금 선택한 명단에서 발송 체크된 사람만 대상입니다.<br>
+        · <b>엑셀 내보내기</b>·<b>PDF 저장</b>·<b>인쇄</b>는 지금 선택한 명단에서 발송 체크된 사람만 대상입니다. PDF 저장은 인쇄 창이 열리면 대상(프린터)을 <b>"PDF로 저장"</b>으로 고르고 저장을 누르면 됩니다.<br>
         · 주소 옆 <span class="tag ok">확인</span>은 주소검색으로 고른 주소, <span class="tag bad">확인필요</span>는 손으로 친 주소입니다.
       </div>
       <button id="btnNewSeason" class="small" style="margin-top:8px">새 시즌 시작 (이 명단 전체 발송 해제)</button>
@@ -213,7 +223,6 @@
   </section>
 
   <section class="card">
-    <div class="print-only" id="printTitle">포도 주문 내역</div>
     <div class="tools">
       <input type="text" id="q" placeholder="이름·주소·전화 검색">
       <label style="margin:0;display:flex;align-items:center;gap:4px"><input type="checkbox" id="onlySend"> 발송만 보기</label>
@@ -240,6 +249,8 @@
     </div>
   </section>
 </main>
+
+<div id="printArea"></div>
 
 <div id="modal">
   <div class="box">
@@ -518,7 +529,7 @@ function render() {
       <td class="addr">${esc(fullAddr(r))} ${r.verified ? '<span class="tag ok">확인</span>' : '<span class="tag bad">확인필요</span>'}${r.zip ? '<span class="tag" style="background:#eee">' + esc(r.zip) + '</span>' : ''}
           ${r.memo ? '<div class="memo">' + esc(r.memo) + '</div>' : ''}</td>
       <td class="phone">${r.phone ? esc(r.phone) : '<span style="color:#c33">없음</span>'}</td>
-      <td class="c qtyc"><input type="number" class="qty no-print" min="1" value="${qty}" data-qty="${r.id}"><span class="print-only" style="font-size:inherit;font-weight:400;margin:0">${qty}</span></td>
+      <td class="c qtyc"><input type="number" class="qty" min="1" value="${qty}" data-qty="${r.id}"></td>
       <td class="snd">${esc(senderName(r.sender))}</td>
       <td class="actions"><button class="small" data-edit="${r.id}">수정</button><button class="small" data-del="${r.id}">삭제</button></td>
     </tr>`;
@@ -586,7 +597,34 @@ $('btnExcel').onclick = () => {
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, '주문내역');
   XLSX.writeFile(wb, '포도_주문내역_' + safeName(c.name) + '_' + today() + '.xlsx');
 };
-$('btnPrint').onclick = () => { $('printTitle').textContent = cur().name + ' 포도 주문 내역 (' + today() + ')'; window.print(); };
+// ---------- 인쇄 / PDF 저장 (전용 출력 페이지) ----------
+function buildPrint() {
+  const c = cur();
+  const rows = c.rows.filter(r => r.send);
+  if (!rows.length) { alert('"' + c.name + '"에 발송 체크된 사람이 없어요'); return false; }
+  const boxes = rows.reduce((a, r) => a + (parseInt(r.qty) || 0), 0);
+  $('printArea').innerHTML =
+    `<div class="pdate">출력: ${today()}</div>
+     <h1>${esc(c.name)} 포도 주문 내역</h1>
+     <table>
+      <colgroup><col style="width:5%"><col style="width:10%"><col style="width:31%"><col style="width:7%"><col style="width:12%"><col style="width:5%"><col style="width:8%"><col style="width:12%"><col style="width:10%"></colgroup>
+      <thead><tr><th>연번</th><th>성명</th><th>주소</th><th>우편번호</th><th>전화번호</th><th>수량</th><th>보내는분</th><th>보내는분 연락처</th><th>메모</th></tr></thead>
+      <tbody>${rows.map((r, i) => `<tr>
+        <td class="c">${i + 1}</td><td>${esc(r.name)}</td><td>${esc(fullAddr(r))}</td><td class="c nw">${esc(r.zip || '')}</td>
+        <td class="nw">${esc(r.phone || '')}</td><td class="c">${parseInt(r.qty) || 1}</td><td>${esc(senderName(r.sender))}</td><td class="nw">${esc(senderPhone(r.sender))}</td>
+        <td>${(r.verified ? '' : '[주소 확인필요] ') + esc(r.memo || '')}</td></tr>`).join('')}</tbody>
+      <tfoot><tr><td colspan="5" class="c">계</td><td class="c">${boxes}</td><td colspan="3">박스 · ${rows.length}명</td></tr></tfoot>
+     </table>
+     <div class="pnote">보내는분 주소는 농장 주소로 통일 · 이 표는 발송 체크된 사람만 포함</div>`;
+  return true;
+}
+$('btnPrint').onclick = () => { if (buildPrint()) window.print(); };
+$('btnPdf').onclick = () => {
+  if (!buildPrint()) return;
+  setSync('인쇄 창에서 대상을 "PDF로 저장"으로 선택하세요');
+  setTimeout(() => window.print(), 50);
+};
+window.addEventListener('afterprint', () => setSync('동기화됨 ✓'));
 
 function fitHeader() { document.documentElement.style.setProperty('--hh', document.querySelector('header').offsetHeight + 'px'); }
 window.addEventListener('resize', fitHeader); fitHeader();
