@@ -13,8 +13,11 @@
   header .sp { flex:1; }
   .stat { color:var(--muted); font-size:15px; }
   .stat b { color:var(--ink); font-size:18px; }
-  main { padding:20px 24px; display:grid; grid-template-columns: 420px 1fr; gap:20px; align-items:start; }
+  main { padding:20px 24px; display:grid; grid-template-columns: 220px 400px 1fr; gap:20px; align-items:start; }
   .card.form { position:sticky; top:calc(var(--hh, 70px) + 16px); max-height:calc(100vh - var(--hh, 70px) - 32px); overflow-y:auto; }
+  /* 화면 폭별 배치: 넓음 = 사이드바|폼|표, 중간 = 칩 한 줄 위에 폼|표, 좁음 = 한 줄씩 */
+  @media (max-width: 1500px) { main { grid-template-columns: 180px 340px 1fr; } }
+  @media (max-width: 1350px) { main { grid-template-columns: 340px 1fr; } }
   @media (max-width: 1000px) { main { grid-template-columns: 1fr; } .card.form { position:static; max-height:none; } }
   .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:18px; }
   .card h2 { font-size:17px; margin:0 0 12px; }
@@ -35,19 +38,78 @@
   .zip { color:var(--muted); font-size:14px; margin-top:4px; min-height:18px; }
   .tools { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; align-items:center; }
   .tools input[type=text] { width:240px; }
-  table { width:100%; border-collapse:collapse; font-size:15px; }
-  th, td { border-bottom:1px solid var(--line); padding:8px 6px; vertical-align:top; text-align:left; }
+  table { width:100%; min-width:740px; table-layout:fixed; border-collapse:collapse; font-size:15px; }
+  th, td { border-bottom:1px solid var(--line); padding:8px 6px; vertical-align:top; text-align:left; overflow-wrap:anywhere; }
+  td.phone { white-space:nowrap; }
   th { background:#fafafa; font-weight:600; }
   td.c, th.c { text-align:center; }
+  tbody tr:nth-child(even) td { background:#fbfbfa; }
+  tbody tr:hover td { background:#f3f0fa; }
   tr.off td { color:#aaa; }
   tr.off td .name { text-decoration:line-through; }
+  td.empty { text-align:center; color:var(--muted); padding:36px 0; line-height:1.7; }
   .name { font-weight:600; }
   .memo { color:#a66; font-size:13px; margin-top:3px; white-space:pre-wrap; }
   .tag { display:inline-block; font-size:12px; padding:1px 7px; border-radius:10px; margin-left:4px; vertical-align:middle; }
   .tag.ok { background:var(--ok); } .tag.bad { background:var(--warn); }
   td.actions { white-space:nowrap; }
-  td.actions button { margin-right:2px; }
-  .qty { width:56px; text-align:center; font-size:16px; padding:4px; }
+  td.actions button { margin-right:2px; padding:4px 8px; }
+  .qty { width:100%; max-width:56px; text-align:center; font-size:16px; padding:4px 2px; }
+  /* 명단 사이드바 (메일함 목록처럼) */
+  .side { position:sticky; top:calc(var(--hh, 70px) + 16px); background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px; }
+  .side h3 { font-size:13px; color:var(--muted); margin:6px 10px 8px; font-weight:600; }
+  .side .item { display:flex; align-items:center; gap:10px; padding:11px 10px; border-radius:8px; cursor:pointer; font-size:16px; user-select:none; }
+  .side .item:hover { background:#f2f2f0; }
+  .side .item.on { background:#efeaf9; color:var(--accent); font-weight:700; }
+  .side .item svg { flex:0 0 auto; opacity:.75; }
+  .side .item .nm { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .side .item .cnt { color:#2f6fd6; font-size:15px; font-weight:600; }
+  .side .item .cnt.zero { color:#bbb; font-weight:400; }
+  .side .item .ic { border:0; background:transparent; padding:0 3px; font-size:14px; color:var(--muted); display:none; line-height:1; }
+  .side .item:hover .ic { display:inline; }
+  .side .item .ic:hover { color:var(--ink); background:transparent; }
+  .side .add { width:100%; margin-top:8px; font-size:15px; border-style:dashed; color:var(--muted); }
+  .side .sum { border-top:1px solid var(--line); margin-top:10px; padding:10px 10px 2px; font-size:13px; color:var(--muted); line-height:1.6; }
+  @media (max-width: 1350px) {
+    .side { grid-column:1 / -1; position:static; display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+    .side h3 { display:none; }
+    .side .list { display:flex; flex-wrap:wrap; gap:6px; }
+    .side .item { padding:8px 14px; border:1px solid var(--line); border-radius:20px; font-size:15px; }
+    .side .item.on { border-color:var(--accent); }
+    .side .item.on .ic { display:inline; }
+    .side .item svg { display:none; }
+    .side .add { width:auto; margin-top:0; padding:8px 14px; border-radius:20px; }
+    .side .sum { display:none; }
+  }
+  /* 휴대폰: 표를 사람마다 카드 한 장으로 */
+  @media (max-width: 700px) {
+    header { padding:10px 14px; gap:8px; }
+    header h1 { font-size:19px; }
+    header .stat { font-size:14px; }
+    header button { font-size:14px; padding:7px 10px; }
+    main { padding:12px; gap:12px; }
+    .card { padding:14px; }
+    .tools input[type=text] { width:100%; }
+    table { min-width:0; }
+    table, tbody, tfoot, tr, td { display:block; }
+    thead { display:none; }
+    tbody tr { display:grid; grid-template-columns: 30px 1fr auto; column-gap:8px; row-gap:4px; padding:12px 4px; border-bottom:1px solid var(--line); }
+    tbody tr td { border:0; padding:0; background:transparent !important; }
+    td.chk { grid-column:1; grid-row:1 / span 4; padding-top:2px; }
+    td.idx { display:none; }
+    td.nm { grid-column:2; grid-row:1; font-size:17px; }
+    td.qtyc { grid-column:3; grid-row:1 / span 2; display:flex; align-items:center; gap:5px; align-self:start; }
+    td.qtyc::before { content:'수량'; font-size:12px; color:var(--muted); }
+    td.qtyc .qty { width:52px; }
+    td.addr { grid-column:2; grid-row:2; font-size:14px; color:#444; }
+    td.phone { grid-column:2; grid-row:3; font-size:15px; }
+    td.snd { grid-column:3; grid-row:3; font-size:13px; color:var(--muted); text-align:right; align-self:center; }
+    td.snd:not(:empty)::before { content:'보내는분 '; }
+    td.actions { grid-column:2 / span 2; grid-row:4; text-align:right; margin-top:4px; }
+    td.empty { grid-column:1 / -1; }
+    tfoot tr { display:flex; justify-content:flex-end; gap:6px; padding:12px 4px; }
+    tfoot td { border:0; padding:0; }
+  }
   #modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:20; align-items:center; justify-content:center; }
   #modal.open { display:flex; }
   #modal .box { background:#fff; border-radius:10px; width:min(560px, 96vw); padding:14px; }
@@ -59,13 +121,13 @@
   .hint { font-size:13px; color:var(--muted); margin-top:8px; line-height:1.5; }
   .print-only { display:none; }
   @media print {
-    header, main > .card.form, .tools, td.actions, th.actions, .no-print { display:none !important; }
+    header, main > .card.form, .side, .tools, td.actions, th.actions, .no-print { display:none !important; }
     body { background:#fff; }
     main { display:block; padding:0; }
     .card { border:0; padding:0; }
     .print-only { display:block; text-align:center; font-size:24px; font-weight:700; margin:0 0 14px; }
     table { font-size:13px; }
-    th, td { border:1px solid #000; }
+    th, td { border:1px solid #000; background:#fff !important; }
     .memo { display:none; }
   }
 </style>
@@ -94,6 +156,13 @@
 </div>
 
 <main id="app" style="display:none">
+  <aside class="side" id="side">
+    <h3>명단</h3>
+    <div class="list" id="tabs"></div>
+    <button class="add" id="tabAdd">＋ 새 명단</button>
+    <div class="sum" id="sideSum"></div>
+  </aside>
+
   <section class="card form">
     <h2 id="formTitle">새로 추가</h2>
     <input type="hidden" id="fId">
@@ -108,7 +177,7 @@
     <input type="hidden" id="fZip">
     <label>상세주소 (동·호수, 층, 가게 이름 등)</label>
     <input type="text" id="fDetail" placeholder="예) 104동 1203호 / 3층 / 김밥35번가">
-    <label>받는분 전화</label>
+    <label>받는분 전화 <span style="color:#a66">— 여기서 Enter를 치면 바로 추가돼요</span></label>
     <input type="tel" id="fPhone" placeholder="010-0000-0000" inputmode="numeric">
     <div class="row">
       <div class="n"><label>수량(박스)</label><input type="number" id="fQty" value="1" min="1"></div>
@@ -120,25 +189,26 @@
     <button id="btnCancel" class="big" style="display:none">수정 취소</button>
 
     <details style="margin-top:18px">
-      <summary style="cursor:pointer;font-weight:600">보내는분 관리</summary>
+      <summary style="cursor:pointer;font-weight:600">보내는분 관리 <span id="senderListName" style="color:var(--muted);font-weight:400;font-size:14px"></span></summary>
       <div class="senders" id="senderList"></div>
       <div class="row" style="margin-top:8px">
         <input type="text" id="sName" placeholder="이름">
         <input type="tel" id="sPhone" placeholder="전화">
         <button id="btnAddSender" class="small">추가</button>
       </div>
-      <div class="hint">보내는분 주소는 택배 접수 시 농장 주소로 통일되니 이름·전화만 있으면 됩니다.</div>
+      <div class="hint">보내는분은 명단마다 따로 관리됩니다. 주소는 택배 접수 시 농장 주소로 통일되니 이름·전화만 있으면 됩니다.</div>
     </details>
 
     <details style="margin-top:12px">
       <summary style="cursor:pointer;font-weight:600">새 시즌 시작 / 도움말</summary>
       <div class="hint">
-        · 명단은 가족 공유 저장소에 자동 저장됩니다(허용된 구글 계정만 접근). 어느 기기에서 고쳐도 다른 기기에 바로 반영돼요. 만약을 대비해 가끔 <b>백업 저장</b>으로 파일도 보관하세요.<br>
-        · 내년에는 <b>새 시즌 시작</b>을 누르면 모든 사람이 "발송 안 함"으로 바뀌고 수량이 1로 초기화됩니다. 보낼 사람만 체크하면 끝.<br>
-        · <b>엑셀 내보내기</b>는 발송 체크된 사람만 내려받습니다.<br>
+        · 왼쪽 <b>명단 목록</b>에서 명단을 나눠 관리할 수 있어요(예: 엄마 명단, 어머님 명단). <b>＋ 새 명단</b>으로 추가하고, 명단 위에 마우스를 올리면 나오는 ✎로 이름 변경, ✕로 삭제합니다.<br>
+        · 명단은 가족 공유 저장소에 자동 저장됩니다(허용된 구글 계정만 접근). 어느 기기에서 고쳐도 다른 기기에 바로 반영돼요. 만약을 대비해 가끔 <b>백업 저장</b>으로 파일도 보관하세요(모든 탭이 한 파일에 담깁니다).<br>
+        · 내년에는 <b>새 시즌 시작</b>을 누르면 이 명단의 모든 사람이 "발송 안 함"으로 바뀌고 수량이 1로 초기화됩니다. 보낼 사람만 체크하면 끝.<br>
+        · <b>엑셀 내보내기</b>·<b>인쇄</b>는 지금 선택한 명단에서 발송 체크된 사람만 대상입니다.<br>
         · 주소 옆 <span class="tag ok">확인</span>은 주소검색으로 고른 주소, <span class="tag bad">확인필요</span>는 손으로 친 주소입니다.
       </div>
-      <button id="btnNewSeason" class="small" style="margin-top:8px">새 시즌 시작 (전체 발송 해제)</button>
+      <button id="btnNewSeason" class="small" style="margin-top:8px">새 시즌 시작 (이 명단 전체 발송 해제)</button>
     </details>
   </section>
 
@@ -155,14 +225,14 @@
     <div style="overflow-x:auto">
     <table>
       <thead><tr>
-        <th class="c no-print" style="width:40px">발송</th>
-        <th class="c" style="width:40px">연번</th>
-        <th style="width:130px">성명</th>
+        <th class="c no-print" style="width:36px">발송</th>
+        <th class="c" style="width:36px">연번</th>
+        <th style="width:100px">성명</th>
         <th>주소</th>
-        <th style="width:130px">전화번호</th>
+        <th style="width:118px">전화번호</th>
         <th class="c" style="width:60px">수량</th>
-        <th style="width:110px">보내는분</th>
-        <th class="actions" style="width:110px"></th>
+        <th style="width:90px">보내는분</th>
+        <th class="actions" style="width:108px"></th>
       </tr></thead>
       <tbody id="tbody"></tbody>
       <tfoot><tr><td colspan="5" class="c" style="font-weight:700">계</td><td class="c" style="font-weight:700" id="ftBox">0</td><td colspan="2">박스</td></tr></tfoot>
@@ -198,24 +268,41 @@ const fs = firebase.firestore();
 try { fs.enablePersistence({ synchronizeTabs: true }); } catch (e) {}
 const DOC = fs.collection('grape').doc('list');
 
-const SEED = {
-  senders: [
-    {id:'s_mom',  name:'엄마(성함 입력)', phone:''},
-    {id:'s_hong', name:'홍미정', phone:'010-3004-4820'},
-    {id:'s_cho',  name:'조윤옥', phone:'010-8862-8031'},
-    {id:'s_lee',  name:'이순영', phone:'010-5478-6841'},
-    {id:'s_shin', name:'신경민', phone:''},
-  ],
-  rows: []
-};
-
 const $ = id => document.getElementById(id);
-let db = JSON.parse(JSON.stringify(SEED));
+const uid = () => 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+// HTML 이스케이프 — 이름·주소·메모에 < & " 같은 문자가 있어도 표가 깨지지 않게
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+const SEED_SENDERS = [
+  {id:'s_mom',  name:'엄마(성함 입력)', phone:''},
+  {id:'s_hong', name:'홍미정', phone:'010-3004-4820'},
+  {id:'s_cho',  name:'조윤옥', phone:'010-8862-8031'},
+  {id:'s_lee',  name:'이순영', phone:'010-5478-6841'},
+  {id:'s_shin', name:'신경민', phone:''},
+];
+
+// ---------- 데이터 구조: { lists: [ {id, name, senders, rows}, ... ] } ----------
+function newList(name, senders) { return { id: 'l' + uid(), name, senders: senders || [], rows: [] }; }
+function normalize(d) {
+  if (d && Array.isArray(d.lists) && d.lists.length)
+    return { lists: d.lists.map(l => ({ id: l.id || 'l' + uid(), name: l.name || '명단', senders: l.senders || [], rows: l.rows || [] })) };
+  // 예전 형식(명단 하나): 첫 탭으로 옮김
+  if (d && (d.rows || d.senders))
+    return { lists: [{ id: 'l_main', name: '엄마 명단', senders: d.senders || [], rows: d.rows || [] }] };
+  return { lists: [{ id: 'l_main', name: '엄마 명단', senders: JSON.parse(JSON.stringify(SEED_SENDERS)), rows: [] }] };
+}
+let db = normalize(null);
+let curId = null;
+try { curId = localStorage.getItem('grape_cur'); } catch (_) {}
+function cur() { let l = db.lists.find(x => x.id === curId); if (!l) { l = db.lists[0]; curId = l.id; } return l; }
+function setCur(id) { curId = id; try { localStorage.setItem('grape_cur', id); } catch (_) {} clearForm(); renderAll(); }
+function renderAll() { renderTabs(); renderSenders(); render(); }
+
 let unsub = null;
 function setSync(t, bad) { const s = $('syncState'); s.textContent = t; s.style.color = bad ? '#c33' : ''; }
 function save() {
   setSync('저장 중…');
-  DOC.set({ senders: db.senders, rows: db.rows, updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: (auth.currentUser || {}).email || '' })
+  DOC.set({ lists: db.lists, updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: (auth.currentUser || {}).email || '' })
     .then(() => setSync('저장됨 ✓'))
     .catch(e => { console.error(e); setSync('저장 실패: ' + (e.code === 'permission-denied' ? '이 계정은 허용되지 않았어요' : e.message), true); });
 }
@@ -223,9 +310,9 @@ function startSync() {
   if (unsub) unsub();
   setSync('불러오는 중…');
   unsub = DOC.onSnapshot({ includeMetadataChanges: true }, snap => {
-    if (!snap.exists) { db = JSON.parse(JSON.stringify(SEED)); save(); }
-    else { const d = snap.data(); db = { senders: d.senders || SEED.senders, rows: d.rows || [] }; }
-    renderSenders(); render();
+    if (!snap.exists) { db = normalize(null); save(); }
+    else db = normalize(snap.data());
+    renderAll();
     setSync(snap.metadata.hasPendingWrites ? '저장 중…' : (snap.metadata.fromCache ? '오프라인(저장된 사본)' : '동기화됨 ✓'), false);
   }, e => {
     console.error(e);
@@ -251,9 +338,9 @@ $('btnLogin').onclick = () => {
 };
 $('btnLogout').onclick = () => { if (unsub) unsub(); unsub = null; auth.signOut(); };
 auth.onAuthStateChanged(u => { if (u) showApp(u); else showGate(''); });
-const uid = () => 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-const senderName = id => (db.senders.find(s => s.id === id) || {}).name || '';
-const senderPhone = id => (db.senders.find(s => s.id === id) || {}).phone || '';
+
+const senderName = id => (cur().senders.find(s => s.id === id) || {}).name || '';
+const senderPhone = id => (cur().senders.find(s => s.id === id) || {}).phone || '';
 function fmtPhone(v) {
   const d = (v || '').replace(/\D/g, '');
   if (d.length === 11) return d.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3');
@@ -262,45 +349,90 @@ function fmtPhone(v) {
 }
 function fullAddr(r) { return [r.addr, r.detail].filter(Boolean).join(' '); }
 
+// ---------- 명단 사이드바 ----------
+const ICON = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg>';
+function renderTabs() {
+  const c = cur();
+  $('tabs').innerHTML = db.lists.map(l => {
+    const on = l.id === c.id; const n = l.rows.filter(r => r.send).length;
+    return `<div class="item ${on ? 'on' : ''}" data-tab="${l.id}">${ICON}<span class="nm">${esc(l.name)}</span>` +
+      `<span class="cnt ${n ? '' : 'zero'}">${n}</span>` +
+      `<button class="ic" data-ren="${l.id}" title="명단 이름 바꾸기">✎</button><button class="ic" data-rm="${l.id}" title="명단 삭제">✕</button></div>`;
+  }).join('');
+  const all = db.lists.reduce((a, l) => { l.rows.forEach(r => { if (r.send) { a.n++; a.b += parseInt(r.qty) || 0; } }); return a; }, { n: 0, b: 0 });
+  $('sideSum').innerHTML = '명단 ' + db.lists.length + '개<br>전체 발송 <b>' + all.n + '</b>명 · <b>' + all.b + '</b>박스';
+}
+$('tabs').onclick = e => {
+  const t = e.target;
+  if (t.dataset.ren) {
+    const l = db.lists.find(x => x.id === t.dataset.ren); if (!l) return;
+    const n = prompt('명단 이름', l.name); if (n === null || !n.trim()) return;
+    l.name = n.trim(); save(); renderAll(); return;
+  }
+  if (t.dataset.rm) {
+    const l = db.lists.find(x => x.id === t.dataset.rm); if (!l) return;
+    if (db.lists.length === 1) return alert('마지막 명단은 삭제할 수 없어요. 대신 이름을 바꾸거나 사람을 지워 주세요.');
+    if (!confirm('"' + l.name + '" 명단을 삭제할까요?\n등록된 ' + l.rows.length + '명이 함께 지워지고 되돌릴 수 없어요.')) return;
+    db.lists = db.lists.filter(x => x.id !== l.id); save();
+    setCur(l.id === curId ? db.lists[0].id : curId); return;
+  }
+  const item = t.closest('[data-tab]');
+  if (item && item.dataset.tab !== cur().id) setCur(item.dataset.tab);
+};
+$('tabAdd').onclick = () => {
+  const n = prompt('새 명단 이름 (예: 어머님 명단)'); if (n === null || !n.trim()) return;
+  if (db.lists.some(x => x.name === n.trim())) return alert('같은 이름의 명단이 이미 있어요');
+  const l = newList(n.trim());
+  if (cur().senders.length && confirm('지금 명단의 보내는분 ' + cur().senders.length + '명을 새 명단에도 복사할까요?')) l.senders = JSON.parse(JSON.stringify(cur().senders));
+  db.lists.push(l); save(); setCur(l.id);
+};
+
 // ---------- 보내는분 ----------
 function renderSenders() {
-  const sel = $('fSender'); const cur = sel.value;
-  sel.innerHTML = db.senders.map(s => `<option value="${s.id}">${s.name}${s.phone ? ' (' + s.phone + ')' : ''}</option>`).join('');
-  if (cur) sel.value = cur;
-  $('senderList').innerHTML = db.senders.map(s =>
-    `<div class="s"><span>${s.name} ${s.phone ? '· ' + s.phone : ''}</span>
-     <button class="small" data-edit="${s.id}">수정</button><button class="small" data-del="${s.id}">삭제</button></div>`).join('');
+  const c = cur(); const sel = $('fSender'); const prev = sel.value;
+  $('senderListName').textContent = '— ' + c.name;
+  sel.innerHTML = c.senders.length
+    ? c.senders.map(s => `<option value="${s.id}">${esc(s.name)}${s.phone ? ' (' + esc(s.phone) + ')' : ''}</option>`).join('')
+    : '<option value="">(아래 "보내는분 관리"에서 먼저 추가)</option>';
+  if (prev && c.senders.some(s => s.id === prev)) sel.value = prev;
+  $('senderList').innerHTML = c.senders.length
+    ? c.senders.map(s =>
+      `<div class="s"><span>${esc(s.name)} ${s.phone ? '· ' + esc(s.phone) : ''}</span>
+       <button class="small" data-edit="${s.id}">수정</button><button class="small" data-del="${s.id}">삭제</button></div>`).join('')
+    : '<div class="hint">아직 보내는분이 없어요. 아래에서 추가해 주세요.</div>';
 }
 $('btnAddSender').onclick = () => {
+  const c = cur();
   const n = $('sName').value.trim(); if (!n) return alert('이름을 입력하세요');
-  if (db.senders.some(x => x.name.trim() === n)) return alert('같은 이름의 보내는분이 이미 있어요');
-  db.senders.push({ id: 's' + uid(), name: n, phone: fmtPhone($('sPhone').value) });
+  if (c.senders.some(x => x.name.trim() === n)) return alert('같은 이름의 보내는분이 이미 있어요');
+  c.senders.push({ id: 's' + uid(), name: n, phone: fmtPhone($('sPhone').value) });
   $('sName').value = ''; $('sPhone').value = ''; save(); renderSenders(); render();
 };
 $('senderList').onclick = e => {
+  const c = cur();
   const ed = e.target.dataset.edit, del = e.target.dataset.del;
   if (ed) {
-    const s = db.senders.find(x => x.id === ed);
+    const s = c.senders.find(x => x.id === ed);
     const n = prompt('이름', s.name); if (n === null) return;
     const p = prompt('전화', s.phone); if (p === null) return;
     s.name = n.trim() || s.name; s.phone = fmtPhone(p); save(); renderSenders(); render();
   }
   if (del) {
-    const s = db.senders.find(x => x.id === del);
-    const used = db.rows.filter(r => r.sender === del);
-    const twin = db.senders.find(x => x.id !== del && x.name.trim() === s.name.trim());
+    const s = c.senders.find(x => x.id === del);
+    const used = c.rows.filter(r => r.sender === del);
+    const twin = c.senders.find(x => x.id !== del && x.name.trim() === s.name.trim());
     if (used.length && twin) {
       if (!confirm('같은 이름(' + twin.name + ')이 또 있어요. 등록된 ' + used.length + '명을 그쪽으로 합치고 이 항목을 삭제할까요?')) return;
       used.forEach(r => r.sender = twin.id);
     } else if (used.length) {
-      const others = db.senders.filter(x => x.id !== del);
+      const others = c.senders.filter(x => x.id !== del);
       if (!others.length) return alert('다른 보내는분이 없어서 삭제할 수 없어요. 먼저 한 명 추가해 주세요.');
       const ans = prompt(s.name + ' 으로 등록된 사람이 ' + used.length + '명 있어요.\n누구로 바꿀까요? 번호를 입력하세요.\n\n' + others.map((o, i) => (i + 1) + '. ' + o.name).join('\n'));
       if (ans === null) return;
       const to = others[parseInt(ans) - 1]; if (!to) return alert('번호가 맞지 않아요');
       used.forEach(r => r.sender = to.id);
     } else if (!confirm(s.name + ' 삭제할까요?')) return;
-    db.senders = db.senders.filter(x => x.id !== del); save(); renderSenders(); render();
+    c.senders = c.senders.filter(x => x.id !== del); save(); renderSenders(); render();
   }
 };
 
@@ -313,7 +445,7 @@ $('btnAddr').onclick = () => {
   pc = new daum.Postcode({
     oncomplete: d => {
       let extra = '';
-      if (d.bname && /[동|로|가]$/g.test(d.bname)) extra += d.bname;
+      if (d.bname && /[동로가]$/.test(d.bname)) extra += d.bname;
       if (d.buildingName && d.apartment === 'Y') extra += (extra ? ', ' : '') + d.buildingName;
       $('fAddr').value = d.roadAddress + (extra ? ' (' + extra + ')' : '');
       $('fZip').value = d.zonecode;
@@ -338,7 +470,7 @@ function clearForm() {
   $('formTitle').textContent = '새로 추가'; $('btnSave').textContent = '목록에 추가'; $('btnCancel').style.display = 'none';
 }
 function editRow(id) {
-  const r = db.rows.find(x => x.id === id); if (!r) return;
+  const r = cur().rows.find(x => x.id === id); if (!r) return;
   $('fId').value = r.id; $('fName').value = r.name; $('fAddr').value = r.addr; $('fAddr').dataset.verified = r.verified ? '1' : '';
   $('fZip').value = r.zip || ''; $('fZipView').textContent = r.zip ? '우편번호 ' + r.zip : (r.verified ? '' : '검색으로 고른 주소가 아님 — 주소검색으로 다시 확인 권장');
   $('fDetail').value = r.detail || ''; $('fPhone').value = r.phone || ''; $('fQty').value = r.qty || 1; $('fSender').value = r.sender; $('fMemo').value = r.memo || '';
@@ -347,6 +479,7 @@ function editRow(id) {
 }
 $('btnCancel').onclick = clearForm;
 $('btnSave').onclick = () => {
+  const c = cur();
   const name = $('fName').value.trim(); if (!name) return alert('받는분 성명을 입력하세요');
   const addr = $('fAddr').value.trim(); if (!addr) return alert('주소를 입력하세요 (주소검색 버튼)');
   const rec = {
@@ -355,16 +488,18 @@ $('btnSave').onclick = () => {
     verified: $('fAddr').dataset.verified === '1', send: true
   };
   const id = $('fId').value;
-  if (id) { const r = db.rows.find(x => x.id === id); Object.assign(r, rec); }
-  else db.rows.push(Object.assign({ id: uid(), src: '직접입력' }, rec));
-  save(); render(); clearForm(); $('fName').focus();
+  const existing = id && c.rows.find(x => x.id === id);
+  if (existing) Object.assign(existing, rec);
+  else c.rows.push(Object.assign({ id: uid(), src: '직접입력' }, rec));
+  save(); renderTabs(); render(); clearForm(); $('fName').focus();
 };
 $('fPhone').onblur = () => $('fPhone').value = fmtPhone($('fPhone').value);
+$('fPhone').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); $('btnSave').click(); } };
 
 // ---------- 목록 ----------
 function visibleRows() {
   const q = $('q').value.trim().toLowerCase();
-  return db.rows.filter(r => {
+  return cur().rows.filter(r => {
     if ($('onlySend').checked && !r.send) return false;
     if ($('onlyBad').checked && r.verified && !r.memo) return false;
     if (q && !(r.name + fullAddr(r) + r.phone + senderName(r.sender)).toLowerCase().includes(q)) return false;
@@ -372,77 +507,90 @@ function visibleRows() {
   });
 }
 function render() {
-  const rows = visibleRows(); let n = 0;
-  $('tbody').innerHTML = rows.map(r => {
+  const c = cur(); const rows = visibleRows(); let n = 0;
+  $('tbody').innerHTML = rows.length ? rows.map(r => {
     const idx = r.send ? ++n : '';
+    const qty = parseInt(r.qty) || 1;
     return `<tr class="${r.send ? '' : 'off'}" data-id="${r.id}">
-      <td class="c no-print"><input type="checkbox" data-send="${r.id}" ${r.send ? 'checked' : ''}></td>
-      <td class="c">${idx}</td>
-      <td><span class="name">${r.name}</span></td>
-      <td>${fullAddr(r)} ${r.verified ? '<span class="tag ok">확인</span>' : '<span class="tag bad">확인필요</span>'}${r.zip ? '<span class="tag" style="background:#eee">' + r.zip + '</span>' : ''}
-          ${r.memo ? '<div class="memo">' + r.memo + '</div>' : ''}</td>
-      <td>${r.phone || '<span style="color:#c33">없음</span>'}</td>
-      <td class="c"><input type="number" class="qty no-print" min="1" value="${r.qty}" data-qty="${r.id}"><span class="print-only" style="font-size:inherit;font-weight:400;margin:0">${r.qty}</span></td>
-      <td>${senderName(r.sender)}</td>
+      <td class="c no-print chk"><input type="checkbox" data-send="${r.id}" ${r.send ? 'checked' : ''}></td>
+      <td class="c idx">${idx}</td>
+      <td class="nm"><span class="name">${esc(r.name)}</span></td>
+      <td class="addr">${esc(fullAddr(r))} ${r.verified ? '<span class="tag ok">확인</span>' : '<span class="tag bad">확인필요</span>'}${r.zip ? '<span class="tag" style="background:#eee">' + esc(r.zip) + '</span>' : ''}
+          ${r.memo ? '<div class="memo">' + esc(r.memo) + '</div>' : ''}</td>
+      <td class="phone">${r.phone ? esc(r.phone) : '<span style="color:#c33">없음</span>'}</td>
+      <td class="c qtyc"><input type="number" class="qty no-print" min="1" value="${qty}" data-qty="${r.id}"><span class="print-only" style="font-size:inherit;font-weight:400;margin:0">${qty}</span></td>
+      <td class="snd">${esc(senderName(r.sender))}</td>
       <td class="actions"><button class="small" data-edit="${r.id}">수정</button><button class="small" data-del="${r.id}">삭제</button></td>
     </tr>`;
-  }).join('');
-  const sendRows = db.rows.filter(r => r.send);
+  }).join('')
+  : `<tr><td colspan="8" class="empty">${c.rows.length ? '조건에 맞는 사람이 없어요.<br>검색어나 필터를 확인해 주세요.' : '"' + esc(c.name) + '"에 아직 아무도 없어요.<br>왼쪽에서 받는분을 추가해 주세요.'}</td></tr>`;
+  const sendRows = c.rows.filter(r => r.send);
   const boxes = sendRows.reduce((a, r) => a + (parseInt(r.qty) || 0), 0);
   $('stCount').textContent = sendRows.length; $('stBox').textContent = boxes; $('ftBox').textContent = boxes;
   $('stBad').textContent = sendRows.filter(r => !r.verified || r.memo || !r.phone).length;
 }
 $('tbody').onclick = e => {
-  const t = e.target;
+  const c = cur(); const t = e.target;
   if (t.dataset.edit) editRow(t.dataset.edit);
-  if (t.dataset.del) { const r = db.rows.find(x => x.id === t.dataset.del); if (confirm(r.name + ' 삭제할까요? (내년에도 안 보낼 사람만 삭제하세요. 올해만 안 보내면 발송 체크를 해제)')) { db.rows = db.rows.filter(x => x.id !== r.id); save(); render(); } }
+  if (t.dataset.del) { const r = c.rows.find(x => x.id === t.dataset.del); if (r && confirm(r.name + ' 삭제할까요? (내년에도 안 보낼 사람만 삭제하세요. 올해만 안 보내면 발송 체크를 해제)')) { c.rows = c.rows.filter(x => x.id !== r.id); save(); renderTabs(); render(); } }
 };
 $('tbody').onchange = e => {
-  const t = e.target;
-  if (t.dataset.send) { db.rows.find(x => x.id === t.dataset.send).send = t.checked; save(); render(); }
-  if (t.dataset.qty) { db.rows.find(x => x.id === t.dataset.qty).qty = Math.max(1, parseInt(t.value) || 1); save(); render(); }
+  const c = cur(); const t = e.target;
+  if (t.dataset.send) { const r = c.rows.find(x => x.id === t.dataset.send); if (r) { r.send = t.checked; save(); renderTabs(); render(); } }
+  if (t.dataset.qty) { const r = c.rows.find(x => x.id === t.dataset.qty); if (r) { r.qty = Math.max(1, parseInt(t.value) || 1); save(); render(); } }
 };
 ['q', 'onlySend', 'onlyBad'].forEach(id => $(id).oninput = render);
-$('btnAllOn').onclick = () => { db.rows.forEach(r => r.send = true); save(); render(); };
-$('btnAllOff').onclick = () => { db.rows.forEach(r => r.send = false); save(); render(); };
+$('btnAllOn').onclick = () => { cur().rows.forEach(r => r.send = true); save(); renderTabs(); render(); };
+$('btnAllOff').onclick = () => { cur().rows.forEach(r => r.send = false); save(); renderTabs(); render(); };
 $('btnNewSeason').onclick = () => {
-  if (!confirm('새 시즌을 시작할까요?\n모든 사람이 "발송 안 함"이 되고 수량이 1로 초기화됩니다. 명단·주소는 그대로 남습니다.')) return;
-  db.rows.forEach(r => { r.send = false; r.qty = 1; }); save(); render();
+  const c = cur();
+  if (!confirm('"' + c.name + '"의 새 시즌을 시작할까요?\n이 명단의 모든 사람이 "발송 안 함"이 되고 수량이 1로 초기화됩니다. 명단·주소는 그대로 남습니다.')) return;
+  c.rows.forEach(r => { r.send = false; r.qty = 1; }); save(); renderTabs(); render();
 };
 
 // ---------- 백업 ----------
 function download(name, blob) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
 const today = () => new Date().toISOString().slice(0, 10);
+const safeName = s => String(s).replace(/[\\/:*?"<>|]/g, '').trim();
 $('btnBackup').onclick = () => download('포도명단_백업_' + today() + '.json', new Blob([JSON.stringify(db, null, 1)], { type: 'application/json' }));
 $('btnRestore').onclick = () => $('fileRestore').click();
 $('fileRestore').onchange = e => {
   const f = e.target.files[0]; if (!f) return;
   const rd = new FileReader();
-  rd.onload = () => { try { const d = JSON.parse(rd.result); if (!d.rows || !d.senders) throw 0; if (confirm('현재 명단을 백업 파일 내용으로 바꿀까요?')) { db = d; save(); renderSenders(); render(); } } catch (_) { alert('백업 파일이 아닙니다'); } };
+  rd.onload = () => {
+    try {
+      const d = JSON.parse(rd.result);
+      if (!d || !(Array.isArray(d.lists) || (d.rows && d.senders))) throw 0;
+      const nd = normalize(d);
+      const summary = nd.lists.map(l => l.name + ' ' + l.rows.length + '명').join(', ');
+      if (confirm('현재 명단 전체를 백업 파일 내용으로 바꿀까요?\n\n백업 내용: ' + summary)) { db = nd; save(); renderAll(); }
+    } catch (_) { alert('백업 파일이 아닙니다'); }
+  };
   rd.readAsText(f); e.target.value = '';
 };
 
 // ---------- 엑셀 ----------
 $('btnExcel').onclick = () => {
-  const rows = db.rows.filter(r => r.send);
-  if (!rows.length) return alert('발송 체크된 사람이 없어요');
+  const c = cur();
+  const rows = c.rows.filter(r => r.send);
+  if (!rows.length) return alert('"' + c.name + '"에 발송 체크된 사람이 없어요');
   const bad = rows.filter(r => !r.phone || !r.verified);
   if (bad.length && !confirm(bad.length + '명이 전화번호가 없거나 주소가 확인필요 상태예요. 그래도 내보낼까요?')) return;
-  const aoa = [['포도 주문 내역'], [],
+  const aoa = [[c.name + ' 포도 주문 내역'], [],
     ['연번', '성명', '주소', '우편번호', '전화번호', '수량', '보내는분', '보내는분 연락처', '메모']];
-  rows.forEach((r, i) => aoa.push([i + 1, r.name, fullAddr(r), r.zip || '', r.phone, r.qty, senderName(r.sender), senderPhone(r.sender), (r.verified ? '' : '[주소 확인필요] ') + (r.memo || '')]));
-  aoa.push(['계', '', '', '', '', rows.reduce((a, r) => a + r.qty, 0), '박스']);
+  rows.forEach((r, i) => aoa.push([i + 1, r.name, fullAddr(r), r.zip || '', r.phone, parseInt(r.qty) || 1, senderName(r.sender), senderPhone(r.sender), (r.verified ? '' : '[주소 확인필요] ') + (r.memo || '')]));
+  aoa.push(['계', '', '', '', '', rows.reduce((a, r) => a + (parseInt(r.qty) || 0), 0), '박스']);
   const ws = XLSX.utils.aoa_to_sheet(aoa);
   ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 8 } }];
   ws['!cols'] = [{ wch: 5 }, { wch: 16 }, { wch: 60 }, { wch: 8 }, { wch: 15 }, { wch: 6 }, { wch: 12 }, { wch: 15 }, { wch: 40 }];
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, '주문내역');
-  XLSX.writeFile(wb, '포도_주문내역_' + today() + '.xlsx');
+  XLSX.writeFile(wb, '포도_주문내역_' + safeName(c.name) + '_' + today() + '.xlsx');
 };
-$('btnPrint').onclick = () => { $('printTitle').textContent = '포도 주문 내역 (' + today() + ')'; window.print(); };
+$('btnPrint').onclick = () => { $('printTitle').textContent = cur().name + ' 포도 주문 내역 (' + today() + ')'; window.print(); };
 
 function fitHeader() { document.documentElement.style.setProperty('--hh', document.querySelector('header').offsetHeight + 'px'); }
 window.addEventListener('resize', fitHeader); fitHeader();
-renderSenders(); render(); clearForm();
+renderAll(); clearForm();
 </script>
 </body>
 </html>
