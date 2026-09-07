@@ -117,6 +117,17 @@
   #modal .box { background:#fff; border-radius:10px; width:min(560px, 96vw); padding:14px; }
   #modal .box .hd { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
   #postcode { width:100%; height:480px; }
+  /* PDF 결과 창 */
+  #pdfModal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:21; align-items:center; justify-content:center; padding:16px; }
+  #pdfModal.open { display:flex; }
+  #pdfModal .box { background:#fff; border-radius:12px; width:min(440px, 100%); padding:20px; }
+  #pdfModal h3 { margin:0 0 6px; font-size:19px; }
+  #pdfModal .fname { font-size:13px; color:var(--muted); word-break:break-all; margin-bottom:14px; }
+  #pdfModal .acts { display:flex; flex-direction:column; gap:8px; }
+  #pdfModal .acts a, #pdfModal .acts button { display:block; width:100%; text-align:center; font-size:17px; padding:12px; border-radius:8px; border:1px solid #bbb; background:#fff; color:var(--ink); text-decoration:none; cursor:pointer; }
+  #pdfModal .acts .primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+  #pdfModal .tip { font-size:13px; color:var(--muted); line-height:1.6; margin-top:14px; }
+  #pdfModal .tip b { color:var(--ink); }
   .senders { margin-top:8px; }
   .senders .s { display:flex; gap:6px; align-items:center; padding:6px 0; border-bottom:1px dashed var(--line); font-size:14px; }
   .senders .s span { flex:1; }
@@ -253,6 +264,20 @@
 </main>
 
 <div id="printArea"></div>
+
+<div id="pdfModal">
+  <div class="box">
+    <h3>✅ PDF가 만들어졌어요</h3>
+    <div class="fname" id="pdfName"></div>
+    <div class="acts">
+      <button id="pdfShare" class="primary" style="display:none">공유 · 저장 (카카오톡, 파일 앱 등)</button>
+      <a id="pdfDown" class="primary" download>내려받기</a>
+      <a id="pdfOpen" target="_blank" rel="noopener">새 탭에서 열기</a>
+      <button id="pdfClose">닫기</button>
+    </div>
+    <div class="tip" id="pdfTip"></div>
+  </div>
+</div>
 
 <div id="modal">
   <div class="box">
@@ -667,14 +692,44 @@ async function savePdf() {
       }
     });
     if (typeof doc.putTotalPages === 'function') doc.putTotalPages('{total}');
-    doc.save('포도_주문내역_' + safeName(c.name) + '_' + today() + '.pdf');
-    setSync('PDF 저장됨 ✓');
+    showPdfResult(doc.output('blob'), '포도_주문내역_' + safeName(c.name) + '_' + today() + '.pdf');
+    setSync('PDF 생성됨 ✓');
   } catch (e) {
     console.error(e);
     alert('PDF를 만들지 못했어요: ' + e.message + '\n\n대신 "인쇄" 버튼을 눌러 "PDF로 저장"을 선택해 보세요.');
   } finally { btn.disabled = false; btn.textContent = 'PDF 저장'; }
 }
 $('btnPdf').onclick = savePdf;
+
+// PDF 결과 창: 휴대폰은 다운로드가 조용히 끝나거나 인앱 브라우저에서 막히므로 공유/열기 선택지를 보여줌
+let pdfUrl = null, pdfFile = null;
+const UA = navigator.userAgent;
+const isMobile = /Android|iPhone|iPad|iPod/i.test(UA) || matchMedia('(pointer:coarse)').matches;
+const isIOS = /iPhone|iPad|iPod/i.test(UA);
+const inApp = /KAKAOTALK|NAVER\(inapp|Instagram|FBAN|FBAV|Line\//i.test(UA);
+function showPdfResult(blob, name) {
+  if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+  pdfUrl = URL.createObjectURL(blob); pdfFile = new File([blob], name, { type: 'application/pdf' });
+  $('pdfName').textContent = name + ' · ' + Math.round(blob.size / 1024) + 'KB';
+  $('pdfDown').href = pdfUrl; $('pdfDown').download = name; $('pdfOpen').href = pdfUrl;
+  const canShare = !!(navigator.canShare && navigator.canShare({ files: [pdfFile] }));
+  $('pdfShare').style.display = canShare ? '' : 'none';
+  $('pdfDown').classList.toggle('primary', !canShare);
+  let tip = '';
+  if (inApp) tip = '<b>카카오톡·네이버 앱 안의 브라우저</b>에서는 파일 저장이 막힐 수 있어요. 안 되면 오른쪽 위 메뉴(⋮)에서 <b>"다른 브라우저로 열기"</b>를 눌러 크롬/사파리로 여세요.';
+  else if (isIOS) tip = '아이폰: <b>공유 · 저장</b>을 누르고 <b>"파일에 저장"</b>을 고르면 파일 앱에, 카카오톡을 고르면 바로 전송돼요. <b>새 탭에서 열기</b>로 열린 화면에서도 공유 버튼으로 저장할 수 있어요.';
+  else if (isMobile) tip = '안드로이드: <b>내려받기</b>를 누르면 <b>다운로드 폴더</b>에 저장되고 알림창에 표시돼요.' + (canShare ? ' <b>공유 · 저장</b>을 누르면 카카오톡 전송이나 드라이브 저장을 바로 할 수 있어요.' : '');
+  else tip = '<b>내려받기</b>를 누르면 브라우저의 다운로드 폴더에 저장됩니다.';
+  $('pdfTip').innerHTML = tip;
+  $('pdfModal').classList.add('open');
+  if (!isMobile) $('pdfDown').click();   // 컴퓨터에서는 바로 내려받기 시작
+}
+$('pdfShare').onclick = async () => {
+  try { await navigator.share({ files: [pdfFile], title: pdfFile.name }); }
+  catch (e) { if (e.name !== 'AbortError') alert('공유 창을 열 수 없어요. "내려받기"를 눌러 주세요.'); }
+};
+$('pdfClose').onclick = () => $('pdfModal').classList.remove('open');
+$('pdfModal').onclick = e => { if (e.target.id === 'pdfModal') $('pdfModal').classList.remove('open'); };
 
 function fitHeader() { document.documentElement.style.setProperty('--hh', document.querySelector('header').offsetHeight + 'px'); }
 window.addEventListener('resize', fitHeader); fitHeader();
