@@ -147,7 +147,7 @@
   <span class="stat">발송 <b id="stCount">0</b>명 · <b id="stBox">0</b>박스 · 확인필요 <b id="stBad">0</b>건</span>
   <span class="sp"></span>
   <button id="btnExcel" class="primary">엑셀 내보내기</button>
-  <button id="btnPdf" title="인쇄 창에서 대상을 'PDF로 저장'으로 선택하세요">PDF 저장</button>
+  <button id="btnPdf" title="지금 명단의 발송 체크된 사람을 PDF 파일로 내려받기">PDF 저장</button>
   <button id="btnPrint">인쇄</button>
   <button id="btnBackup">백업 저장</button>
   <button id="btnRestore">백업 불러오기</button>
@@ -215,7 +215,7 @@
         · 왼쪽 <b>명단 목록</b>에서 명단을 나눠 관리할 수 있어요(예: 엄마 명단, 어머님 명단). <b>＋ 새 명단</b>으로 추가하고, 명단 위에 마우스를 올리면 나오는 ✎로 이름 변경, ✕로 삭제합니다.<br>
         · 명단은 가족 공유 저장소에 자동 저장됩니다(허용된 구글 계정만 접근). 어느 기기에서 고쳐도 다른 기기에 바로 반영돼요. 만약을 대비해 가끔 <b>백업 저장</b>으로 파일도 보관하세요(모든 탭이 한 파일에 담깁니다).<br>
         · 내년에는 <b>새 시즌 시작</b>을 누르면 이 명단의 모든 사람이 "발송 안 함"으로 바뀌고 수량이 1로 초기화됩니다. 보낼 사람만 체크하면 끝.<br>
-        · <b>엑셀 내보내기</b>·<b>PDF 저장</b>·<b>인쇄</b>는 지금 선택한 명단에서 발송 체크된 사람만 대상입니다. PDF 저장은 인쇄 창이 열리면 대상(프린터)을 <b>"PDF로 저장"</b>으로 고르고 저장을 누르면 됩니다.<br>
+        · <b>엑셀 내보내기</b>·<b>PDF 저장</b>·<b>인쇄</b>는 지금 선택한 명단에서 발송 체크된 사람만 대상입니다. PDF 저장은 휴대폰에서도 바로 파일로 내려받아지고, 처음 한 번은 글꼴을 받느라 몇 초 걸릴 수 있어요.<br>
         · 주소 옆 <span class="tag ok">확인</span>은 주소검색으로 고른 주소, <span class="tag bad">확인필요</span>는 손으로 친 주소입니다.
       </div>
       <button id="btnNewSeason" class="small" style="margin-top:8px">새 시즌 시작 (이 명단 전체 발송 해제)</button>
@@ -619,12 +619,60 @@ function buildPrint() {
   return true;
 }
 $('btnPrint').onclick = () => { if (buildPrint()) window.print(); };
-$('btnPdf').onclick = () => {
-  if (!buildPrint()) return;
-  setSync('인쇄 창에서 대상을 "PDF로 저장"으로 선택하세요');
-  setTimeout(() => window.print(), 50);
-};
-window.addEventListener('afterprint', () => setSync('동기화됨 ✓'));
+
+// ---------- PDF 저장 (페이지 안에서 직접 PDF 파일 생성 — 휴대폰에서도 동작) ----------
+const loadScript = src => new Promise((ok, no) => { if (document.querySelector(`script[src="${src}"]`)) return ok(); const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => no(new Error('스크립트 로드 실패: ' + src)); document.head.appendChild(s); });
+let fontB64 = null;
+async function ensurePdfLibs() {
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js');
+  if (!fontB64) {
+    const buf = await (await fetch('fonts/NanumGothic.ttf')).arrayBuffer();
+    const bytes = new Uint8Array(buf); let bin = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    fontB64 = btoa(bin);
+  }
+}
+async function savePdf() {
+  const c = cur();
+  const rows = c.rows.filter(r => r.send);
+  if (!rows.length) return alert('"' + c.name + '"에 발송 체크된 사람이 없어요');
+  const btn = $('btnPdf'); btn.disabled = true; btn.textContent = 'PDF 만드는 중…';
+  try {
+    await ensurePdfLibs();
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    doc.addFileToVFS('NanumGothic.ttf', fontB64); doc.addFont('NanumGothic.ttf', 'Nanum', 'normal');
+    doc.setFont('Nanum');
+    const boxes = rows.reduce((a, r) => a + (parseInt(r.qty) || 0), 0);
+    const title = c.name + ' 포도 주문 내역';
+    const body = rows.map((r, i) => [i + 1, r.name, fullAddr(r), r.zip || '', r.phone || '', parseInt(r.qty) || 1, senderName(r.sender), senderPhone(r.sender), (r.verified ? '' : '[주소 확인필요] ') + (r.memo || '')]);
+    doc.autoTable({
+      head: [['연번', '성명', '주소', '우편번호', '전화번호', '수량', '보내는분', '보내는분 연락처', '메모']],
+      body,
+      foot: [[{ content: '계', colSpan: 5, styles: { halign: 'center' } }, { content: String(boxes), styles: { halign: 'center' } }, { content: '박스 · ' + rows.length + '명', colSpan: 3 }]],
+      startY: 22, margin: { left: 10, right: 10, top: 22, bottom: 14 },
+      theme: 'grid', showHead: 'everyPage', showFoot: 'lastPage',
+      styles: { font: 'Nanum', fontSize: 9.5, cellPadding: 1.6, lineColor: [0, 0, 0], lineWidth: 0.2, textColor: [0, 0, 0], valign: 'middle', overflow: 'linebreak' },
+      headStyles: { fillColor: [238, 238, 238], textColor: [0, 0, 0], fontStyle: 'normal', halign: 'center' },
+      footStyles: { fillColor: [247, 247, 247], textColor: [0, 0, 0], fontStyle: 'normal' },
+      columnStyles: { 0: { cellWidth: 12, halign: 'center' }, 1: { cellWidth: 28 }, 2: { cellWidth: 'auto' }, 3: { cellWidth: 18, halign: 'center' }, 4: { cellWidth: 30 }, 5: { cellWidth: 12, halign: 'center' }, 6: { cellWidth: 22 }, 7: { cellWidth: 30 }, 8: { cellWidth: 40 } },
+      didDrawPage: d => {
+        const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight();
+        doc.setFont('Nanum'); doc.setFontSize(16); doc.text(title, W / 2, 13, { align: 'center' });
+        doc.setFontSize(8.5); doc.setTextColor(90); doc.text('출력: ' + today(), W - 10, 8, { align: 'right' });
+        doc.text(String(d.pageNumber) + ' / {total}', W / 2, H - 7, { align: 'center' }); doc.setTextColor(0);
+      }
+    });
+    if (typeof doc.putTotalPages === 'function') doc.putTotalPages('{total}');
+    doc.save('포도_주문내역_' + safeName(c.name) + '_' + today() + '.pdf');
+    setSync('PDF 저장됨 ✓');
+  } catch (e) {
+    console.error(e);
+    alert('PDF를 만들지 못했어요: ' + e.message + '\n\n대신 "인쇄" 버튼을 눌러 "PDF로 저장"을 선택해 보세요.');
+  } finally { btn.disabled = false; btn.textContent = 'PDF 저장'; }
+}
+$('btnPdf').onclick = savePdf;
 
 function fitHeader() { document.documentElement.style.setProperty('--hh', document.querySelector('header').offsetHeight + 'px'); }
 window.addEventListener('resize', fitHeader); fitHeader();
