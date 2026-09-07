@@ -270,6 +270,7 @@
     <h3>✅ PDF가 만들어졌어요</h3>
     <div class="fname" id="pdfName"></div>
     <div class="acts">
+      <a id="pdfChrome" class="primary" style="display:none">크롬으로 이 페이지 열기</a>
       <button id="pdfShare" class="primary" style="display:none">공유 · 저장 (카카오톡, 파일 앱 등)</button>
       <a id="pdfDown" class="primary" download>내려받기</a>
       <a id="pdfOpen" target="_blank" rel="noopener">새 탭에서 열기</a>
@@ -706,17 +707,36 @@ let pdfUrl = null, pdfFile = null;
 const UA = navigator.userAgent;
 const isMobile = /Android|iPhone|iPad|iPod/i.test(UA) || matchMedia('(pointer:coarse)').matches;
 const isIOS = /iPhone|iPad|iPod/i.test(UA);
-const inApp = /KAKAOTALK|NAVER\(inapp|Instagram|FBAN|FBAV|Line\//i.test(UA);
+const isAndroid = /Android/i.test(UA);
+const inApp = /KAKAOTALK|NAVER\(inapp|Instagram|FBAN|FBAV|Line\/|; wv\)/i.test(UA);
+// 안드로이드: 크롬으로 현재 페이지를 여는 인텐트 링크
+const chromeIntent = 'intent://' + location.host + location.pathname + '#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=' + encodeURIComponent(location.href) + ';end';
+$('pdfChrome').href = chromeIntent;
+if (inApp) {
+  const bar = document.createElement('div');
+  bar.style.cssText = 'background:#fff3b0;color:#553;padding:10px 16px;font-size:14px;line-height:1.5;text-align:center';
+  bar.innerHTML = '지금은 <b>앱 안의 브라우저</b>로 열려 있어서 PDF 저장이 안 돼요. ' + (isAndroid
+    ? '<a href="' + chromeIntent + '" style="color:var(--accent);font-weight:700">크롬으로 열기</a> 또는 메뉴(⋮) → "다른 브라우저로 열기"'
+    : '메뉴에서 <b>"Safari로 열기"</b>를 눌러 주세요.');
+  document.body.insertBefore(bar, document.body.firstChild);
+}
 function showPdfResult(blob, name) {
   if (pdfUrl) URL.revokeObjectURL(pdfUrl);
   pdfUrl = URL.createObjectURL(blob); pdfFile = new File([blob], name, { type: 'application/pdf' });
   $('pdfName').textContent = name + ' · ' + Math.round(blob.size / 1024) + 'KB';
   $('pdfDown').href = pdfUrl; $('pdfDown').download = name; $('pdfOpen').href = pdfUrl;
-  const canShare = !!(navigator.canShare && navigator.canShare({ files: [pdfFile] }));
+  const canShare = !inApp && !!(navigator.canShare && navigator.canShare({ files: [pdfFile] }));
   $('pdfShare').style.display = canShare ? '' : 'none';
-  $('pdfDown').classList.toggle('primary', !canShare);
+  $('pdfDown').classList.toggle('primary', !canShare && !inApp);
+  // 앱 안 브라우저(카카오톡 등)는 blob 다운로드·새 탭·공유가 모두 막혀 있어 크롬으로 나가는 길만 보여줌
+  $('pdfChrome').style.display = inApp && isAndroid ? '' : 'none';
+  $('pdfDown').style.display = inApp ? 'none' : '';
+  $('pdfOpen').style.display = inApp ? 'none' : '';
+  $('pdfModal').querySelector('h3').textContent = inApp ? '⚠️ 여기서는 저장할 수 없어요' : '✅ PDF가 만들어졌어요';
   let tip = '';
-  if (inApp) tip = '<b>카카오톡·네이버 앱 안의 브라우저</b>에서는 파일 저장이 막힐 수 있어요. 안 되면 오른쪽 위 메뉴(⋮)에서 <b>"다른 브라우저로 열기"</b>를 눌러 크롬/사파리로 여세요.';
+  if (inApp) tip = '<b>카카오톡 등 앱 안의 브라우저</b>는 파일 저장·새 탭·공유가 모두 막혀 있어요.<br>' + (isAndroid
+    ? '위의 <b>크롬으로 이 페이지 열기</b>를 누르거나, 오른쪽 위 메뉴(⋮)에서 <b>"다른 브라우저로 열기"</b>를 선택한 뒤 다시 PDF 저장을 눌러 주세요.'
+    : '오른쪽 아래(또는 위) 메뉴에서 <b>"Safari로 열기"</b>를 선택한 뒤 다시 PDF 저장을 눌러 주세요.');
   else if (isIOS) tip = '아이폰: <b>공유 · 저장</b>을 누르고 <b>"파일에 저장"</b>을 고르면 파일 앱에, 카카오톡을 고르면 바로 전송돼요. <b>새 탭에서 열기</b>로 열린 화면에서도 공유 버튼으로 저장할 수 있어요.';
   else if (isMobile) tip = '안드로이드: <b>내려받기</b>를 누르면 <b>다운로드 폴더</b>에 저장되고 알림창에 표시돼요.' + (canShare ? ' <b>공유 · 저장</b>을 누르면 카카오톡 전송이나 드라이브 저장을 바로 할 수 있어요.' : '');
   else tip = '<b>내려받기</b>를 누르면 브라우저의 다운로드 폴더에 저장됩니다.';
