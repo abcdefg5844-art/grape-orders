@@ -50,6 +50,7 @@
   td.empty { text-align:center; color:var(--muted); padding:36px 0; line-height:1.7; }
   .name { font-weight:600; }
   .memo { color:#a66; font-size:13px; margin-top:3px; white-space:pre-wrap; }
+  .sphone { color:var(--muted); font-size:12px; white-space:nowrap; margin-top:2px; }
   .tag { display:inline-block; font-size:12px; padding:1px 7px; border-radius:10px; margin-left:4px; vertical-align:middle; }
   .tag.ok { background:var(--ok); } .tag.bad { background:var(--warn); }
   td.actions { white-space:nowrap; }
@@ -105,6 +106,7 @@
     td.phone { grid-column:2; grid-row:3; font-size:15px; }
     td.snd { grid-column:3; grid-row:3; font-size:13px; color:var(--muted); text-align:right; align-self:center; }
     td.snd:not(:empty)::before { content:'보내는분 '; }
+    td.snd .sphone { font-size:13px; color:var(--ink); margin-top:0; }
     td.actions { grid-column:2 / span 2; grid-row:4; text-align:right; margin-top:4px; }
     td.empty { grid-column:1 / -1; }
     tfoot tr { display:flex; justify-content:flex-end; gap:6px; padding:12px 4px; }
@@ -530,7 +532,7 @@ function render() {
           ${r.memo ? '<div class="memo">' + esc(r.memo) + '</div>' : ''}</td>
       <td class="phone">${r.phone ? esc(r.phone) : '<span style="color:#c33">없음</span>'}</td>
       <td class="c qtyc"><input type="number" class="qty" min="1" value="${qty}" data-qty="${r.id}"></td>
-      <td class="snd">${esc(senderName(r.sender))}</td>
+      <td class="snd">${esc(senderName(r.sender))}${senderPhone(r.sender) ? '<div class="sphone">' + esc(senderPhone(r.sender)) + '</div>' : ''}</td>
       <td class="actions"><button class="small" data-edit="${r.id}">수정</button><button class="small" data-del="${r.id}">삭제</button></td>
     </tr>`;
   }).join('')
